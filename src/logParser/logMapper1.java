@@ -40,7 +40,7 @@ public class logMapper1 extends MapReduceBase
       String message= matcher.group(2);
       
       // output it with a count of 1
-      output.collect(new Text(tenantID), new Text(message));
+      output.collect(new Text(tenantID), lineContents);
     }
   }
 
