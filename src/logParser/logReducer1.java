@@ -40,44 +40,60 @@ public class logReducer1 extends MapReduceBase implements Reducer<Text, Text, Te
 
 	public void splitMessageAndCreateJSON(String message) {
 
-		String timestamp = null;
-		String logLevel = null;
-		String preIDMsg = null;
-		String TenantId = null;
-		String logMessage = null;
 
-		Pattern idPattern = Pattern.compile("^(.*)\\s+(\\[[A-Z]{4,5}\\])\\s+(.*)\\s+(\\[tenantID:[0-9]{2,3}\\])(.*)");
+//		Pattern idPattern = Pattern.compile("^(.*)\\s+(\\[[A-Z]{4,5}\\])\\s+(.*)\\s+(\\[tenantID:[0-9]{2,3}\\])(.*)");
+//		Pattern idPattern = Pattern.compile("^(.*)\\s+(\\[[A-Z]{4,5}\\])\\s+(BMC.[A-Z]{2,10}\\s+-)\\s+(\\[Thread=.*\\])\\s+(\\[Class=.*\\])\\s+(\\[tenantID:[0-9]{2,3}\\])(.*)");
+		Pattern idPattern = Pattern.compile("^(.*)\\s(.*)(,.*)\\s+(\\[[A-Z]{4,5}\\])\\s+(BMC.[A-Z]{2,10}\\s+)(-)\\s+(\\[Thread=.*\\])\\s+(\\[Class=.*\\])\\s+(\\[tenantID:[0-9]{2,3}\\])(.*)");
 		Matcher matcher = idPattern.matcher(message);
 
+		int n=0;
+		
 		if (matcher.find()) {
 
-			timestamp = matcher.group(1);
-			logLevel = matcher.group(2);
-			preIDMsg = matcher.group(3);
-			TenantId = matcher.group(4);
-			logMessage = matcher.group(5);
-
+			bsmLogPojo bsmLog= new bsmLogPojo();
+			bsmLog.setDate(matcher.group(1));
+			bsmLog.setTimestamp(matcher.group(2));
+			bsmLog.setLogLevel(matcher.group(4));
+			bsmLog.setBmcTask(matcher.group(5));
+			bsmLog.setThreadID(matcher.group(7));
+			bsmLog.setClassName(matcher.group(8));
+			bsmLog.setTenantId(matcher.group(9));
+			bsmLog.setLogMessage(matcher.group(10));
+//			bsmLog.setOrigLog(message);
+			
+		
+			
 			JSONObject obj = new JSONObject();
-			obj.put("timestamp", matcher.group(1));
-			obj.put("log level", matcher.group(2));
-			obj.put("PreId logs", matcher.group(3));
-			obj.put("TenantId", matcher.group(4));
-			obj.put("Log Message", matcher.group(5));
+			obj.put("@timestamp", bsmLog.getDate()+"T"+bsmLog.getTimestamp());
+			obj.put("log level", bsmLog.getLogLevel());
+			obj.put("BMC Task", bsmLog.getBmcTask());
+			obj.put("thread ID ", bsmLog.getThreadID());
+			obj.put("classname ", bsmLog.getClassName());
+			obj.put("tenantId", bsmLog.getTenantId());
+			obj.put("log Message", bsmLog.getLogMessage());
+//			obj.put("origLog", bsmLog.getOrigLog());
 
+//			//Setting up the index for bulk import of the output Json
+			
+			JSONObject indexJson= new JSONObject();
+			indexJson.put("_index", "bmc_dashboard");
+			
+			JSONObject parentIndexJson= new JSONObject();
+			parentIndexJson.put("index", indexJson);
+			
+//			indexJson.put("_id", n);
+//			n++;
 			try (FileWriter file = new FileWriter("/Users/kbagri/Lab/hadoop/hadoop-0.20.2/reduceJSONOutput.json", true)) {
-
-				file.write(obj.toJSONString());
+				
+				file.write(parentIndexJson.toJSONString() + "\n");
+				file.write(obj.toJSONString() + "\n");
+				
 				file.flush();
 
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-
-			// System.out.println("Time stamp: "+ matcher.group(1));
-			// System.out.println("Log Level: "+ matcher.group(2) );
-			// System.out.println("PreId logs" + matcher.group(3));
-			// System.out.println("Tenant Id: " + matcher.group(4));
-			// System.out.println("Log Message: " + matcher.group(5));
+		
 		}
 
 	}
